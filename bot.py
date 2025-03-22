@@ -11,7 +11,7 @@ from flask import Flask, request
 load_dotenv()
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-WEBHOOK_URL = f"https://aliexpress-shipping-methods.vercel.app/{TOKEN}"
+WEBHOOK_URL = f"https://aliexpress-shipping-methods.vercel.app/webhook"
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(bot)
