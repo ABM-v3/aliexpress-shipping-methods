@@ -11,6 +11,7 @@ def extract_product_info(product_url):
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
+        print("Fetching product page:", product_url)  # Log the product URL
         response = requests.get(product_url, headers=headers, timeout=10)
         response.raise_for_status()  # Raise an error for bad status codes
 
@@ -18,18 +19,21 @@ def extract_product_info(product_url):
         soup = BeautifulSoup(response.text, 'html.parser')
 
         # Extract product name
-        product_name = soup.find('h1', class_='product-title-text').text.strip()
-
-        # Log the product name for debugging
-        print("Product Name:", product_name)
-        return {
-            'product_name': product_name
-        }
+        product_name_element = soup.find('h1', class_='product-title-text')
+        if product_name_element:
+            product_name = product_name_element.text.strip()
+            print("Product Name Found:", product_name)  # Log the product name
+            return {
+                'product_name': product_name
+            }
+        else:
+            print("Product Name Not Found")  # Log if product name is not found
+            return None
     except requests.exceptions.RequestException as e:
-        print("Error fetching product page:", e)
+        print("Error fetching product page:", e)  # Log request errors
         return None
     except Exception as e:
-        print("Unexpected error:", e)
+        print("Unexpected error:", e)  # Log unexpected errors
         return None
 
 # API endpoint
@@ -49,7 +53,7 @@ def check_product():
             })
         return jsonify({'error': 'Failed to fetch product information'}), 500
     except Exception as e:
-        print("Unexpected error in /check-product:", e)
+        print("Unexpected error in /check-product:", e)  # Log unexpected errors
         return jsonify({'error': 'Internal server error'}), 500
 
 # Health check endpoint
