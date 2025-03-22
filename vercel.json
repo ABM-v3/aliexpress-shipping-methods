@@ -16,12 +16,3 @@
 
 
 
-
-{
-  "supports_standard_shipping": true,
-  "shipping_methods": [
-    "Aliexpress Standard Shipping",
-    "ePacket",
-    "DHL"
-  ]
-}
