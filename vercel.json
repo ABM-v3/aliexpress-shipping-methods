@@ -1,15 +1,8 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "app.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "app.py"
-    }
+  "supports_standard_shipping": true,
+  "shipping_methods": [
+    "Aliexpress Standard Shipping",
+    "ePacket",
+    "DHL"
   ]
 }
