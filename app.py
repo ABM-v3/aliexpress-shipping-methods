@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
-# Function to extract product name and shipping methods from AliExpress product page
+# Function to extract product name from AliExpress product page
 def extract_product_info(product_url):
     try:
         # Fetch the product page
@@ -20,18 +20,10 @@ def extract_product_info(product_url):
         # Extract product name
         product_name = soup.find('h1', class_='product-title-text').text.strip()
 
-        # Extract shipping methods
-        shipping_methods = []
-        shipping_elements = soup.find_all('div', class_='shipping-method')
-        for element in shipping_elements:
-            shipping_methods.append(element.text.strip())
-
-        # Log the product info for debugging
+        # Log the product name for debugging
         print("Product Name:", product_name)
-        print("Shipping Methods:", shipping_methods)
         return {
-            'product_name': product_name,
-            'shipping_methods': shipping_methods
+            'product_name': product_name
         }
     except requests.exceptions.RequestException as e:
         print("Error fetching product page:", e)
@@ -41,8 +33,8 @@ def extract_product_info(product_url):
         return None
 
 # API endpoint
-@app.route('/check-shipping', methods=['POST'])
-def check_shipping():
+@app.route('/check-product', methods=['POST'])
+def check_product():
     try:
         data = request.json
         product_url = data.get('product_url')
@@ -52,18 +44,12 @@ def check_shipping():
         # Extract product info
         product_info = extract_product_info(product_url)
         if product_info:
-            # Check if "Aliexpress Standard Shipping" is in the list
-            supports_standard_shipping = any(
-                "Aliexpress Standard Shipping" in method for method in product_info['shipping_methods']
-            )
             return jsonify({
-                'product_name': product_info['product_name'],
-                'supports_standard_shipping': supports_standard_shipping,
-                'shipping_methods': product_info['shipping_methods']
+                'product_name': product_info['product_name']
             })
         return jsonify({'error': 'Failed to fetch product information'}), 500
     except Exception as e:
-        print("Unexpected error in /check-shipping:", e)
+        print("Unexpected error in /check-product:", e)
         return jsonify({'error': 'Internal server error'}), 500
 
 # Health check endpoint
