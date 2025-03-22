@@ -1,58 +1,55 @@
-import os
-import re
-import requests
-from bs4 import BeautifulSoup
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import Update
-from aiogram.utils.executor import start_webhook
-from flask import Flask, request
-from dotenv import load_dotenv
-import asyncio
 
-# Load environment variables
-load_dotenv()
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 WEBHOOK_URL = "https://aliexpress-shipping-methods.vercel.app/webhook"
 
-# Initialize bot and dispatcher
-bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
-app = Flask(__name__)
+import os
+import requests
+from bs4 import BeautifulSoup
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# Function to fetch product name from AliExpress
+# Replace with your bot token
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+# Function to fetch product name from AliExpress link
 def fetch_product_name(url):
-    headers = {"User-Agent": "Mozilla/5.0"}
-    response = requests.get(url, headers=headers)
-    if response.status_code == 200:
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers)
         soup = BeautifulSoup(response.text, "html.parser")
-        title = soup.find("title").text.strip()
-        return title.replace("| AliExpress", "")
-    return "Couldn't fetch product details. Make sure the link is correct."
+        product_name = soup.find("h1", {"class": "product-title-text"}).text.strip()
+        return product_name
+    except Exception as e:
+        print(f"Error fetching product name: {e}")
+        return None
 
-# Handle messages with AliExpress links
-@dp.message_handler(regexp=r"https?://(?:www\.)?aliexpress\..+")
-async def get_product_name(message: types.Message):
-    url = re.search(r"https?://[^\s]+", message.text).group()
-    product_name = fetch_product_name(url)
-    await message.reply(f"Product Name: {product_name}")
+# Command handler for /start
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Hello! Send me an AliExpress link, and I'll fetch the product name for you.")
 
-# Handle start/help commands
-@dp.message_handler(commands=["start", "help"])
-async def send_welcome(message: types.Message):
-    await message.reply("Send me an AliExpress link, and I'll fetch the product name for you!")
+# Message handler for AliExpress links
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    text = update.message.text
+    if "aliexpress.com" in text:
+        product_name = fetch_product_name(text)
+        if product_name:
+            await update.message.reply_text(f"Product Name: {product_name}")
+        else:
+            await update.message.reply_text("Sorry, I couldn't fetch the product name.")
+    else:
+        await update.message.reply_text("Please send a valid AliExpress link.")
 
-# Webhook route for Telegram
-@app.route("/webhook", methods=["POST"])
-async def webhook():
-    update = Update(**request.json)
-    await dp.process_update(update)
-    return "OK", 200
+# Main function to run the bot
+def main():
+    app = Application.builder().token(BOT_TOKEN).build()
 
-# Set webhook on startup
-async def set_webhook():
-    await bot.set_webhook(WEBHOOK_URL)
+    # Add handlers
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-# Run Flask server
+    # Start the bot
+    app.run_polling()
+
 if __name__ == "__main__":
-    asyncio.run(set_webhook())
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    main()
