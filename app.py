@@ -4,6 +4,10 @@ from bs4 import BeautifulSoup
 
 app = Flask(__name__)
 
+# Telegram Bot Token
+TELEGRAM_BOT_TOKEN = '7668277092:AAHduqzgcBig3eVJOHpgThyXqhCrXAL1N8Q'
+TELEGRAM_API_URL = f'https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}'
+
 # Function to extract product name from AliExpress product page
 def extract_product_info(product_url):
     try:
@@ -23,9 +27,7 @@ def extract_product_info(product_url):
         if product_name_element:
             product_name = product_name_element.text.strip()
             print("Product Name Found:", product_name)  # Log the product name
-            return {
-                'product_name': product_name
-            }
+            return product_name
         else:
             print("Product Name Not Found")  # Log if product name is not found
             return None
@@ -36,25 +38,38 @@ def extract_product_info(product_url):
         print("Unexpected error:", e)  # Log unexpected errors
         return None
 
-# API endpoint
-@app.route('/check-product', methods=['POST'])
-def check_product():
+# Function to send a message to the user
+def send_message(chat_id, text):
+    payload = {
+        'chat_id': chat_id,
+        'text': text,
+    }
+    response = requests.post(f'{TELEGRAM_API_URL}/sendMessage', json=payload)
+    return response.json()
+
+# Telegram webhook endpoint
+@app.route('/webhook', methods=['POST'])
+def webhook():
     try:
         data = request.json
-        product_url = data.get('product_url')
-        if not product_url:
-            return jsonify({'error': 'Product URL is required'}), 400
+        chat_id = data['message']['chat']['id']
+        text = data['message']['text']
 
-        # Extract product info
-        product_info = extract_product_info(product_url)
-        if product_info:
-            return jsonify({
-                'product_name': product_info['product_name']
-            })
-        return jsonify({'error': 'Failed to fetch product information'}), 500
+        if text == '/start':
+            send_message(chat_id, 'Welcome! Send me an AliExpress product link, and I will fetch the product name.')
+        elif 'aliexpress.com' in text:
+            product_name = extract_product_info(text)
+            if product_name:
+                send_message(chat_id, f'📦 Product Name: {product_name}')
+            else:
+                send_message(chat_id, '⚠️ Failed to fetch product information. Please try again later.')
+        else:
+            send_message(chat_id, 'Please send an AliExpress product link.')
+
+        return jsonify({'status': 'ok'})
     except Exception as e:
-        print("Unexpected error in /check-product:", e)  # Log unexpected errors
-        return jsonify({'error': 'Internal server error'}), 500
+        print("Error in webhook:", e)  # Log unexpected errors
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 # Health check endpoint
 @app.route('/')
